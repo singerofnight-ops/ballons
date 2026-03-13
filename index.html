@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Слоговой Тренажер с ИИ</title>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- ИКОНКИ ---
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+        const Maximize = (p) => <IconWrapper {...p}><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></IconWrapper>;
+        const Minimize = (p) => <IconWrapper {...p}><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></IconWrapper>;
+        const Printer = (p) => <IconWrapper {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></IconWrapper>;
+        const Edit2 = (p) => <IconWrapper {...p}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></IconWrapper>;
+        const Check = (p) => <IconWrapper {...p}><polyline points="20 6 9 17 4 12"/></IconWrapper>;
+        const ArrowRight = (p) => <IconWrapper {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconWrapper>;
+        const ArrowLeft = (p) => <IconWrapper {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></IconWrapper>;
+        const Car = (p) => <IconWrapper {...p}><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a2 2 0 00-1.6-.8H9a2 2 0 00-2 2v2L3 11.4a2 2 0 00-1.4.6L1 13.5V16h3m10 0a2 2 0 11-4 0m4 0a2 2 0 10-4 0m-10 0a2 2 0 11-4 0m4 0a2 2 0 10-4 0"/></IconWrapper>;
+        const Plane = (p) => <IconWrapper {...p}><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21.5 4c0 0-2 .5-3.5 2L14.5 9.5 6.3 7.7c-.5-.1-.9.1-1.1.5l-1.5 3.1c-.2.4 0 .9.4 1.1L9 15l-3.5 3.5-2.2-.4c-.4-.1-.8.1-1 .4L1 20l5.5 1.5L8 23l1.5-1.3c.3-.2.5-.6.4-1l-.4-2.2L13 15l2.6 4.9c.2.4.7.6 1.1.4l3.1-1.5c.4-.2.6-.6.5-1.1z"/></IconWrapper>;
+        const Rocket = (p) => <IconWrapper {...p}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></IconWrapper>;
+        const Star = (p) => <IconWrapper {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconWrapper>;
+        const Sparkles = (p) => <IconWrapper {...p}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></IconWrapper>;
+        const Loader2 = (p) => <IconWrapper {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconWrapper>;
+
+        // --- НАСТРОЙКИ GEMINI API ---
+        const apiKey = ""; 
+
+        const fetchGeminiJSON = async (prompt, retries = 5) => {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < retries; i++) {
+                try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                if (!response.ok) throw new Error('API request failed');
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) throw new Error('No text in response');
+                return JSON.parse(text);
+                } catch (err) {
+                if (i === retries - 1) throw err;
+                await new Promise(r => setTimeout(r, delays[i]));
+                }
+            }
+        };
+
+        // --- ЗВУКОВЫЕ ЭФФЕКТЫ ---
+        const playSound = (type) => {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            if (type === 'pop') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+            } else if (type === 'error') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(150, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.5, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+            } else if (type === 'yay') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, ctx.currentTime);
+            osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+            } else if (type === 'win') {
+            const playNote = (freq, time) => {
+                const nOsc = ctx.createOscillator();
+                const nGain = ctx.createGain();
+                nOsc.connect(nGain);
+                nGain.connect(ctx.destination);
+                nOsc.type = 'sine';
+                nOsc.frequency.setValueAtTime(freq, ctx.currentTime + time);
+                nGain.gain.setValueAtTime(0, ctx.currentTime + time);
+                nGain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + time + 0.05);
+                nGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + time + 0.4);
+                nOsc.start(ctx.currentTime + time);
+                nOsc.stop(ctx.currentTime + time + 0.4);
+            };
+            playNote(261.63, 0);    
+            playNote(329.63, 0.1);  
+            playNote(392.00, 0.2);  
+            playNote(523.25, 0.35); 
+            }
+        } catch (e) { console.log("Audio not supported"); }
+        };
+
+        const Confetti = () => {
+        const colors = ['#fce18a', '#ff726d', '#b48def', '#f4306d', '#42a5f5', '#66bb6a'];
+        return (
+            <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
+            {Array.from({ length: 80 }).map((_, i) => (
+                <div
+                key={i}
+                className="absolute w-3 h-8 rounded-sm opacity-90"
+                style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `-50px`,
+                    backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+                    animation: `confetti-fall ${Math.random() * 3 + 2.5}s linear forwards`,
+                    animationDelay: `${Math.random() * 0.5}s`,
+                    transform: `rotate(${Math.random() * 360}deg)`
+                }}
+                />
+            ))}
+            <style>{`@keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); } }`}</style>
+            </div>
+        );
+        };
+
+        const IllustrationBackground = () => (
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-b from-[#e0f7fa] to-[#fff3e0]">
+            <div className="absolute top-10 right-20 w-32 h-32 bg-yellow-200 rounded-full blur-[2px] opacity-80"></div>
+            <div className="absolute top-[10%] left-[5%] w-40 h-16 bg-white rounded-full opacity-70 animate-[float_25s_infinite_linear]"></div>
+            <div className="absolute top-[20%] right-[15%] w-56 h-20 bg-white rounded-full opacity-60 animate-[float_35s_infinite_linear_reverse]"></div>
+            <div className="absolute top-[40%] left-[30%] w-32 h-12 bg-white rounded-full opacity-50 animate-[float_20s_infinite_linear]"></div>
+            <div className="absolute -bottom-32 -left-20 w-[120%] h-80 bg-[#dcedc8] rounded-[100%] opacity-80"></div>
+            <div className="absolute -bottom-40 -right-20 w-[110%] h-96 bg-[#c5e1a5] rounded-[100%] opacity-70"></div>
+        </div>
+        );
+
+        // --- КОМПОНЕНТ ДЛЯ ПЕЧАТИ (РАБОЧИЙ ЛИСТ С ЛАБИРИНТОМ) ---
+        const PrintWorksheet = ({ target }) => {
+            if (!target) return null;
+
+            // Генерация шариков
+            const balloons = useMemo(() => {
+                const distractors = ['МА', 'ПА', 'ОУ', 'МУ', 'ТИ', 'ДА', 'НО', 'СО', 'УА', 'ЦА', 'ЩУ', 'БЭ', 'ЛУ'].filter(s => s !== target);
+                return Array(12).fill(null).map((_, i) => {
+                    if (i < 5) return target; // 5 правильных
+                    return distractors[i % distractors.length]; // 7 обманок
+                }).sort(() => Math.random() - 0.5);
+            }, [target]);
+
+            // Генерация сетки лабиринта (6x6)
+            const mazeGrid = useMemo(() => {
+                const cols = 6;
+                const rows = 6;
+                const path = new Set();
+                let currX = 0; 
+                let currY = 0;
+                path.add(`${currX},${currY}`);
+
+                // Строим гарантированный путь от 0,0 до 5,5
+                while (currX < cols - 1 || currY < rows - 1) {
+                    let canMoveRight = currX < cols - 1;
+                    let canMoveDown = currY < rows - 1;
+
+                    if (canMoveRight && canMoveDown) {
+                        if (Math.random() > 0.5) currX++;
+                        else currY++;
+                    } else if (canMoveRight) {
+                        currX++;
+                    } else {
+                        currY++;
+                    }
+                    path.add(`${currX},${currY}`);
+                }
+
+                // Заполняем сетку
+                const distractors = ['МА', 'ПА', 'ОУ', 'МУ', 'ТИ', 'ДА', 'НО', 'СО', 'УА', 'ЦА', 'ЩУ', 'БЭ', 'ЛУ', 'ЧЕ', 'НЫ', 'ДЯ', 'ЗА', 'КО', 'ЖИ', 'ШИ'].filter(s => s !== target);
+                const grid = [];
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (path.has(`${c},${r}`)) {
+                            grid.push(target);
+                        } else {
+                            grid.push(distractors[Math.floor(Math.random() * distractors.length)]);
+                        }
+                    }
+                }
+                return grid;
+            }, [target]);
+
+            return (
+                <div className="hidden print-only print:flex flex-col w-full h-screen bg-white text-black py-8 px-12 font-sans overflow-hidden">
+                    {/* Заголовок */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-4xl font-black mb-3 uppercase tracking-wider">Учимся читать</h1>
+                        <p className="text-2xl font-bold">Изучаем слог: <span className="border-b-4 border-black px-4">{target}</span></p>
+                    </div>
+
+                    {/* Задание 1: Раскрась шарики */}
+                    <div className="mb-10 flex-shrink-0">
+                        <h2 className="text-2xl font-bold mb-4">1. Найди и раскрась все шарики со слогом <span className="underline font-black">{target}</span></h2>
+                        <div className="flex flex-wrap justify-center gap-x-12 gap-y-4">
+                            {balloons.map((syllable, idx) => (
+                                <div key={idx} className="relative flex flex-col items-center">
+                                    <svg width="60" height="85" viewBox="0 0 100 130" fill="none" stroke="black" strokeWidth="4">
+                                        <ellipse cx="50" cy="55" rx="45" ry="50" />
+                                        <path d="M45 105 L55 105 L50 115 Z" fill="white" />
+                                        <path d="M50 115 Q40 125 50 130" strokeWidth="3" fill="none" />
+                                    </svg>
+                                    <span className="absolute top-[28px] text-2xl font-black text-black">{syllable}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Задание 2: Лабиринт */}
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                        <h2 className="text-2xl font-bold mb-6 self-start">2. Помоги мышке дойти до дома по слогам <span className="underline font-black">{target}</span></h2>
+                        
+                        <div className="relative inline-block mt-4">
+                            {/* Мышка (старт) */}
+                            <div className="absolute -top-16 -left-10 text-black">
+                                <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M19 11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2 5 5 0 0 1 10 0z"/>
+                                    <path d="M12 21V13"/><path d="M16 8a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3"/><path d="M22 17v2a2 2 0 0 1-2 2h-4"/><path d="M2 17v2a2 2 0 0 0 2 2h4"/>
+                                    <circle cx="9" cy="11" r="0.5" fill="currentColor"/><circle cx="15" cy="11" r="0.5" fill="currentColor"/>
+                                </svg>
+                            </div>
+                            
+                            {/* Сетка лабиринта */}
+                            <div className="grid grid-cols-6 gap-[0.35rem]">
+                                {mazeGrid.map((syllable, i) => (
+                                    <div key={i} className="w-14 h-14 rounded-full border-[3px] border-black flex items-center justify-center bg-white">
+                                        <span className="text-xl font-black">{syllable}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Домик (финиш) */}
+                            <div className="absolute -bottom-16 -right-12 text-black">
+                                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                    <polyline points="9 22 9 12 15 12 15 22"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- ГЛАВНЫЙ КОМПОНЕНТ ---
+        const SyllableTrainer = () => {
+        const [isFullscreen, setIsFullscreen] = useState(false);
+        const [currentPage, setCurrentPage] = useState('learn'); 
+        const [isEditing, setIsEditing] = useState(false);
+        const [isGeneratingSyllables, setIsGeneratingSyllables] = useState(false);
+        
+        const [pairs, setPairs] = useState([
+            { id: 1, left: 'А', right: 'У', icon: 'car', distance: 85, duration: '3s' },
+            { id: 2, left: 'М', right: 'А', icon: 'plane', distance: 55, duration: '2s' },
+            { id: 3, left: 'П', right: 'О', icon: 'rocket', distance: 30, duration: '1s' }
+        ]);
+
+        const [animations, setAnimations] = useState({ 1: false, 2: false, 3: false });
+        
+        // Текущий изучаемый слог для лабиринта
+        const currentTargetSyllable = pairs[0].left + pairs[0].right;
+
+        const handlePrintClick = () => {
+            window.print();
+        };
+
+        const toggleFullscreen = () => {
+            if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => console.log(err));
+            setIsFullscreen(true);
+            } else {
+            document.exitFullscreen();
+            setIsFullscreen(false);
+            }
+        };
+
+        useEffect(() => {
+            const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        }, []);
+
+        const updatePair = (id, side, value) => {
+            const cleanValue = value.toUpperCase().slice(0, 1);
+            setPairs(pairs.map(p => p.id === id ? { ...p, [side]: cleanValue } : p));
+            setAnimations(prev => ({ ...prev, [id]: false }));
+        };
+
+        const triggerAnimation = (id) => {
+            if (isEditing) return;
+            setAnimations(prev => ({ ...prev, [id]: !prev[id] }));
+        };
+
+        const generateSmartSyllables = async () => {
+            setIsGeneratingSyllables(true);
+            const prompt = `Сгенерируй 3 пары случайных букв для обучения детей чтению (русский язык). Каждая пара должна образовывать простой, но популярный слог (например: согласная + гласная). 
+            Верни ТОЛЬКО JSON массив из 3 объектов. Формат строго: [{"left": "М", "right": "А"}, {"left": "С", "right": "О"}, {"left": "Л", "right": "У"}]`;
+            
+            try {
+            const generatedPairs = await fetchGeminiJSON(prompt);
+            if (Array.isArray(generatedPairs) && generatedPairs.length === 3) {
+                setPairs(prevPairs => prevPairs.map((p, index) => ({
+                ...p,
+                left: generatedPairs[index].left?.toUpperCase() || p.left,
+                right: generatedPairs[index].right?.toUpperCase() || p.right
+                })));
+                setAnimations({ 1: false, 2: false, 3: false });
+            }
+            } catch (error) {
+            console.error("Ошибка при генерации слогов:", error);
+            const fallbacks = [{l:'Т', r:'И'}, {l:'Р', r:'У'}, {l:'К', r:'О'}, {l:'Д', r:'А'}, {l:'З', r:'У'}];
+            const randoms = fallbacks.sort(() => 0.5 - Math.random()).slice(0,3);
+            setPairs(prevPairs => prevPairs.map((p, idx) => ({ ...p, left: randoms[idx].l, right: randoms[idx].r })));
+            } finally {
+            setIsGeneratingSyllables(false);
+            }
+        };
+
+        const renderIcon = (type) => {
+            const baseStyle = "w-14 h-14 text-white p-2.5 rounded-full shadow-md z-20 relative";
+            switch (type) {
+            case 'car': return <div className={`${baseStyle} bg-blue-400`}><Car size={36} /></div>;
+            case 'plane': return <div className={`${baseStyle} bg-teal-400`}><Plane size={36} /></div>;
+            case 'rocket': return <div className={`${baseStyle} bg-orange-400`}><Rocket size={36} /></div>;
+            default: return null;
+            }
+        };
+
+        return (
+            <div className="min-h-screen font-sans selection:bg-pink-200 overflow-hidden relative">
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+                body { font-family: 'Nunito', sans-serif; }
+                
+                @media print {
+                    @page { size: auto; margin: 0mm; }
+                    body { background: white !important; margin: 0; padding: 0; }
+                    .print-hidden { display: none !important; }
+                    .print-only { display: flex !important; }
+                }
+                
+                @keyframes float {
+                0% { transform: translateX(-50px); }
+                50% { transform: translateX(50px); }
+                100% { transform: translateX(-50px); }
+                }
+                @keyframes riseUp {
+                from { top: 120%; }
+                to { top: var(--final-top); }
+                }
+                @keyframes bob {
+                0%, 100% { transform: translateY(0) rotate(-2deg); }
+                50% { transform: translateY(-8px) rotate(2deg); }
+                }
+                @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-10px) rotate(-5deg); }
+                75% { transform: translateX(10px) rotate(5deg); }
+                }
+                @keyframes popIn {
+                0% { transform: scale(0.5) translate(-50%, -50%); opacity: 0; }
+                70% { transform: scale(1.1) translate(-45%, -45%); opacity: 1; }
+                100% { transform: scale(1) translate(-50%, -50%); opacity: 1; }
+                }
+            `}</style>
+
+            {/* Черно-белый лист для печати */}
+            <PrintWorksheet target={currentTargetSyllable} />
+
+            {/* Основное цветное приложение (скрывается при печати) */}
+            <div className="print-hidden w-full h-full relative">
+                <div className="illustration-bg"><IllustrationBackground /></div>
+
+                {/* Верхняя панель управления */}
+                <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-50">
+                    <div className="flex flex-col gap-3">
+                    {currentPage === 'learn' && (
+                        <button 
+                        onClick={handlePrintClick}
+                        className="flex items-center gap-2 px-6 py-3 bg-white border-4 border-blue-200 rounded-full shadow-lg text-blue-600 hover:bg-blue-50 hover:scale-105 transition-all w-fit"
+                        >
+                        <Printer size={24} />
+                        <span className="font-black text-xl">ПЕЧАТЬ</span>
+                        </button>
+                    )}
+                    {currentPage === 'learn' && (
+                        <div className="flex gap-2">
+                        <button 
+                            onClick={() => setIsEditing(!isEditing)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-white/90 rounded-full shadow-md text-pink-500 hover:bg-pink-50 transition-colors"
+                        >
+                            {isEditing ? <Check size={20} /> : <Edit2 size={20} />}
+                            <span className="font-bold">{isEditing ? 'Готово' : 'Изменить буквы'}</span>
+                        </button>
+                        
+                        <button 
+                            onClick={generateSmartSyllables}
+                            disabled={isGeneratingSyllables}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all disabled:opacity-70 disabled:scale-100"
+                        >
+                            {isGeneratingSyllables ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
+                            <span className="font-bold">✨ Волшебные слоги</span>
+                        </button>
+                        </div>
+                    )}
+                    </div>
+
+                    <div className="flex gap-4">
+                    <button 
+                        onClick={() => setCurrentPage(currentPage === 'learn' ? 'game' : 'learn')}
+                        className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-pink-400 to-rose-400 text-white border-4 border-white/50 rounded-full shadow-xl hover:scale-105 transition-all font-black text-xl"
+                    >
+                        {currentPage === 'learn' ? (
+                        <>ИГРАТЬ <ArrowRight size={28} /></>
+                        ) : (
+                        <><ArrowLeft size={28} /> НАЗАД</>
+                        )}
+                    </button>
+                    
+                    <button 
+                        onClick={toggleFullscreen}
+                        className="p-4 bg-white/90 rounded-full shadow-md text-gray-500 hover:text-gray-800 transition-colors h-fit"
+                    >
+                        {isFullscreen ? <Minimize size={28} /> : <Maximize size={28} />}
+                    </button>
+                    </div>
+                </div>
+
+                {/* Основной контент */}
+                <div className="pt-24 h-screen flex flex-col items-center justify-center relative z-10">
+                    {currentPage === 'learn' ? (
+                    <div className="w-full max-w-5xl px-8 flex flex-col gap-14 bg-white/40 backdrop-blur-sm p-12 rounded-[3rem] shadow-sm border-2 border-white/50">
+                        {pairs.map((pair) => (
+                        <div key={pair.id} className="flex items-center relative">
+                            <div className="flex-shrink-0 z-20">
+                            {renderIcon(pair.icon)}
+                            </div>
+
+                            <div className="flex-grow flex items-center relative h-28 bg-transparent group cursor-pointer" onClick={() => triggerAnimation(pair.id)}>
+                            
+                            <div
+                                className="absolute top-1/2 -translate-y-1/2 transition-all ease-linear flex items-center track-arrow z-0"
+                                style={{
+                                left: animations[pair.id] ? `calc(${pair.distance}% - 70px)` : '100px',
+                                width: animations[pair.id] ? '0px' : `calc(${pair.distance}% - 160px)`,
+                                transitionDuration: pair.duration,
+                                opacity: animations[pair.id] ? 0 : 1,
+                                '--dist': `${pair.distance}%`
+                                }}
+                            >
+                                <div className="w-full h-0 border-t-[6px] border-dashed border-pink-400"></div>
+                                <div className="w-0 h-0 border-y-[10px] border-y-transparent border-l-[16px] border-l-pink-400 -ml-1"></div>
+                            </div>
+
+                            <div 
+                                className={`absolute top-0 bottom-0 z-30 transition-all ease-linear flex items-center justify-center slide-letter`}
+                                style={{
+                                left: animations[pair.id] ? `calc(${pair.distance}% - 70px)` : '20px',
+                                transitionDuration: pair.duration
+                                }}
+                            >
+                                <div className="w-20 h-20 bg-white rounded-full shadow-md flex items-center justify-center border-4 border-pink-100">
+                                {isEditing ? (
+                                    <input 
+                                    value={pair.left} 
+                                    onChange={(e) => updatePair(pair.id, 'left', e.target.value)}
+                                    className="w-full h-full text-5xl font-black text-[#c14a3b] bg-transparent text-center outline-none rounded-full"
+                                    onClick={(e) => e.stopPropagation()}
+                                    />
+                                ) : (
+                                    <span className={`text-6xl font-black text-[#c14a3b] tracking-wider transition-transform ${animations[pair.id] ? 'scale-110' : 'group-hover:scale-110'}`}>
+                                    {pair.left || '\u00A0'}
+                                    </span>
+                                )}
+                                </div>
+                            </div>
+
+                            <div 
+                                className="absolute top-0 bottom-0 z-10 flex items-center justify-center"
+                                style={{ left: `${pair.distance}%` }}
+                            >
+                                <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center border-4 border-transparent">
+                                {isEditing ? (
+                                    <input 
+                                    value={pair.right} 
+                                    onChange={(e) => updatePair(pair.id, 'right', e.target.value)}
+                                    className="w-full h-full text-5xl font-black text-[#c14a3b] bg-transparent text-center outline-none rounded-full border-2 border-red-200"
+                                    onClick={(e) => e.stopPropagation()}
+                                    />
+                                ) : (
+                                    <span className="text-6xl font-black text-[#c14a3b] tracking-wider">
+                                    {pair.right || '\u00A0'}
+                                    </span>
+                                )}
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        ))}
+                    </div>
+                    ) : (
+                    <BalloonGame pairs={pairs} />
+                    )}
+                </div>
+            </div>
+            </div>
+        );
+        };
+
+        const BalloonGame = ({ pairs }) => {
+        const targetSyllables = pairs
+            .map(p => (p.left + p.right).trim())
+            .filter(s => s.length === 2);
+        
+        const generateDistractors = () => {
+            const distractors = new Set();
+            pairs.forEach(p => {
+            if(p.left && p.right) distractors.add(p.right + p.left); 
+            });
+            const common = ['МА', 'ПА', 'ОУ', 'МУ', 'ТИ', 'ДА', 'НО', 'СО', 'ОА'];
+            common.forEach(c => distractors.add(c));
+            return Array.from(distractors).filter(d => !targetSyllables.includes(d));
+        };
+
+        const [currentTargetIndex, setCurrentTargetIndex] = useState(0);
+        const [levelScore, setLevelScore] = useState(0); 
+        const [showConfetti, setShowConfetti] = useState(false);
+        const [balloons, setBalloons] = useState([]);
+        const [speed, setSpeed] = useState('normal'); 
+        const [victoryData, setVictoryData] = useState(null); 
+        
+        const currentTarget = targetSyllables.length > 0 ? targetSyllables[currentTargetIndex % targetSyllables.length] : "АУ";
+        const distractors = generateDistractors();
+
+        const fetchMagicWord = async (syllable) => {
+            try {
+            const prompt = `Придумай одно простое детское слово на русском языке, которое содержит или начинается на слог '${syllable}'. И подбери к нему 1 релевантный эмодзи. 
+            Верни ТОЛЬКО JSON объект в формате: {"word": "МАК", "emoji": "🌺"}`;
+            
+            const data = await fetchGeminiJSON(prompt);
+            if (data && data.word && data.emoji) {
+                setVictoryData(data);
+            }
+            } catch (e) {
+            console.error("Failed to fetch magic word:", e);
+            setVictoryData({ word: `Ура, ${syllable}!`, emoji: "✨" });
+            }
+        };
+
+        useEffect(() => {
+            const colors = ['bg-pink-400', 'bg-blue-400', 'bg-yellow-400', 'bg-green-400', 'bg-purple-400'];
+            
+            const types = Array(15).fill(false);
+            for(let i=0; i<5; i++) types[i] = true;
+            types.sort(() => Math.random() - 0.5);
+
+            const newBalloons = Array.from({ length: 15 }).map((_, i) => {
+            const col = i % 5; 
+            const row = Math.floor(i / 5); 
+
+            const leftPercent = 4 + col * 19; 
+            const finalTopPercent = 16 + row * 20; 
+            
+            const isTarget = types[i];
+            const text = isTarget ? currentTarget : distractors[Math.floor(Math.random() * distractors.length)] || "ОУ";
+            
+            const baseDuration = speed === 'slow' ? 14 : speed === 'normal' ? 8 : 4;
+            const distance = 120 - finalTopPercent;
+            const duration = (distance / 100) * baseDuration;
+            const delay = row * 0.5 + Math.random() * 0.3;
+
+            return {
+                id: Math.random().toString(36).substr(2, 9),
+                text,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                left: `${leftPercent}%`,
+                finalTop: `${finalTopPercent}%`,
+                delay: `${delay}s`,
+                duration: `${duration}s`,
+                bobDelay: `${Math.random() * 2}s`, 
+                state: 'floating' 
+            };
+            });
+            setBalloons(newBalloons);
+        }, [currentTarget, speed]);
+
+        const handleBalloonClick = (id, text) => {
+            if (showConfetti) return;
+
+            setBalloons(prev => prev.map(b => {
+            if (b.id !== id) return b;
+            
+            if (text === currentTarget) {
+                playSound('pop');
+                const newScore = levelScore + 1;
+                setLevelScore(newScore);
+                
+                if (newScore === 5) {
+                    setTimeout(() => playSound('win'), 200);
+                    setShowConfetti(true);
+                    
+                    fetchMagicWord(currentTarget);
+
+                    setTimeout(() => {
+                        setCurrentTargetIndex(prevIndex => prevIndex + 1);
+                        setLevelScore(0);
+                        setShowConfetti(false);
+                        setVictoryData(null); 
+                    }, 5000); 
+                }
+                return { ...b, state: 'popped' };
+            } else {
+                playSound('error');
+                return { ...b, state: 'error' };
+            }
+            }));
+
+            if (text !== currentTarget) {
+            setTimeout(() => {
+                setBalloons(prev => prev.map(b => b.id === id ? { ...b, state: 'floating' } : b));
+            }, 500);
+            }
+        };
+
+        return (
+            <div className="absolute inset-0 w-full h-full overflow-hidden flex flex-col items-center">
+            
+            {showConfetti && <Confetti />}
+
+            {showConfetti && victoryData && (
+                <div className="absolute top-[50%] left-[50%] z-[110] bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border-8 border-pink-300 p-8 flex flex-col items-center justify-center transform-gpu origin-center animate-[popIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards]"
+                    style={{ transform: 'translate(-50%, -50%)' }}>
+                <div className="text-[120px] leading-none mb-4 drop-shadow-md">{victoryData.emoji}</div>
+                <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500 uppercase tracking-wider text-center">
+                    {victoryData.word}
+                </div>
+                <div className="absolute -top-6 -right-6 text-4xl animate-pulse">✨</div>
+                <div className="absolute -bottom-4 -left-6 text-5xl animate-bounce">🎈</div>
+                </div>
+            )}
+
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-40 bg-white/95 backdrop-blur-md px-16 py-4 rounded-b-[40px] shadow-2xl border-4 border-t-0 border-pink-300 flex flex-col items-center transform transition-all">
+                <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest mb-1">Лопни слог:</h2>
+                <div className="text-7xl font-black text-[#c14a3b] drop-shadow-md leading-none">
+                {currentTarget}
+                </div>
+                
+                <div className="flex gap-2 mt-3">
+                    {[...Array(5)].map((_, i) => (
+                        <Star 
+                            key={i} 
+                            size={32} 
+                            className={`${i < levelScore ? 'text-yellow-400 fill-yellow-400 drop-shadow-sm scale-110' : 'text-gray-200'} transition-all duration-300`} 
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-3 items-center bg-white/80 backdrop-blur-md px-6 py-3 rounded-full shadow-lg border-2 border-white">
+                <span className="font-bold text-gray-500 uppercase tracking-wide text-sm">Скорость:</span>
+                {['slow', 'normal', 'fast'].map(s => (
+                <button
+                    key={s}
+                    onClick={() => setSpeed(s)}
+                    className={`w-12 h-12 flex items-center justify-center rounded-full text-2xl transition-all ${speed === s ? 'bg-pink-400 text-white shadow-inner scale-110' : 'bg-white text-gray-500 hover:bg-pink-50 shadow-sm'}`}
+                    title={s === 'slow' ? 'Медленно' : s === 'normal' ? 'Обычно' : 'Быстро'}
+                >
+                    {s === 'slow' ? '🐌' : s === 'normal' ? '🚶' : '🚀'}
+                </button>
+                ))}
+            </div>
+
+            <div className="absolute inset-0 z-10 pointer-events-none">
+                {balloons.map((balloon) => {
+                if (balloon.state === 'popped') return null;
+                
+                return (
+                    <div
+                    key={balloon.id}
+                    className="absolute pointer-events-auto z-10"
+                    style={{
+                        left: balloon.left,
+                        top: '120%', 
+                        '--final-top': balloon.finalTop,
+                        animation: `riseUp ${balloon.duration} ${balloon.delay} ease-out forwards`
+                    }}
+                    >
+                    <div style={{ animation: `bob 3s ${balloon.bobDelay} infinite ease-in-out` }}>
+                        <div 
+                        onPointerDown={(e) => { e.preventDefault(); handleBalloonClick(balloon.id, balloon.text); }}
+                        className={`cursor-pointer w-[16vw] max-w-[110px] h-[19vw] max-h-[130px] rounded-[50%] ${balloon.color} shadow-inner relative flex items-center justify-center transition-transform ${balloon.state === 'error' ? 'animate-[shake_0.5s_ease-in-out]' : 'hover:scale-105'} before:content-[''] before:absolute before:w-[25%] before:h-[30%] before:bg-white/40 before:rounded-[50%] before:top-[12%] before:left-[12%] before:rotate-[-45deg] after:content-[''] after:absolute after:bottom-[-12px] after:left-1/2 after:-translate-x-1/2 after:border-l-[8px] after:border-l-transparent after:border-r-[8px] after:border-r-transparent after:border-b-[14px] after:border-b-current after:text-inherit`}
+                        style={{ color: 'inherit' }}
+                        >
+                            <span className="text-[5vw] sm:text-4xl lg:text-5xl font-black text-white drop-shadow-lg relative z-10 select-none">
+                            {balloon.text}
+                            </span>
+                        </div>
+                        <svg className="w-[8vw] max-w-[50px] h-[12vw] max-h-[80px] mt-3 mx-auto opacity-60 pointer-events-none" viewBox="0 0 10 50">
+                        <path d="M5,0 Q0,10 5,20 T5,40 T5,50" fill="none" stroke="gray" strokeWidth="1.5" />
+                        </svg>
+                    </div>
+                    </div>
+                );
+                })}
+            </div>
+            </div>
+        );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SyllableTrainer />);
+    </script>
+</body>
+</html>
