@@ -37,7 +37,21 @@
             'ЦА', 'ЦО', 'ЦУ', 'ЦЫ', 'ЦЕ',
             'ЩА', 'ЩУ', 'ЩИ', 'ЩЕ', 'ЩЁ',
             'ФА', 'ФО', 'ФУ', 'ФЫ', 'ФИ', 'ФЁ',
-            'ЧА', 'ЧУ', 'ЧИ', 'ЧЕ', 'БЭ', 'ТЁ', 'ДЯ', 'НЫ', 'ЛУ', 'КО', 'ЖИ', 'ШИ'
+            'ЧА', 'ЧУ', 'ЧИ', 'ЧЕ', 'БЭ', 'ТЁ', 'ДЯ',
+            'СМА', 'СМО', 'СМУ', 'СМЫ', 'ХМА', 'ХМО', 'ХМУ', 'ХМЫ',
+            'МРА', 'МРО', 'МРУ', 'ШРА', 'ШРУ', 'ШРО',
+            'САМ', 'СОМ', 'СУМ', 'МОС', 'МУС', 'ХАМ', 'ХУМ', 'ХОМ', 'МОХ', 'МАХ',
+            'РАМ', 'РОМ', 'РУМ', 'ШУМ', 'ШАМ', 'СЫР', 'СОР', 'ШАР', 'МАЛ', 'МЫЛ',
+            'РИМ', 'МИР', 'НОС', 'СЫН', 'СОН', 'МАК', 'РАК', 'ЛУК', 'СУК', 'СОК',
+            'СЛА', 'СЛО', 'СЛУ', 'СЛЫ', 'СЛИ', 'ШЛА', 'ШЛО', 'ШЛУ', 'ШЛЫ', 'ШЛИ',
+            'МЛА', 'МЛО', 'МЛУ', 'МЛЫ', 'МЛИ', 'ШНА', 'ШНО', 'ШНУ', 'ШНЫ', 'ШНИ',
+            'ТРА', 'ТРО', 'ТРУ', 'ТРЫ', 'ТРИ', 'КРА', 'КРО', 'КРУ', 'КРЫ', 'КРИ',
+            'МЕ', 'СЕ', 'ХЕ', 'РЕ', 'ШЕ', 'ЛЕ', 'НЕ', 'КЕ', 'ТЕ', 'ПЕ', 'ЗЕ', 'ГЕ', 'ВЕ', 'ДЕ', 'БЕ', 'ЖЕ', 'ЕЛ', 'ЕМ',
+            'МЯ', 'СЯ', 'ХЯ', 'РЯ', 'ДЯ', 'ЛЯ', 'НЯ', 'КЯ', 'ТЯ', 'ПЯ', 'ЗЯ', 'ГЯ', 'ВЯ', 'БЯ', 'ЯМ', 'ЯР', 'ЯК',
+            'МЮ', 'СЮ', 'ХЮ', 'РЮ', 'ТЮ', 'ЛЮ', 'НЮ', 'КЮ', 'ПЮ', 'ЗЮ', 'ГЮ', 'ВЮ', 'ДЮ', 'БЮ', 'ЮБ', 'ЮГ', 'ЮР',
+            'ЁЖ', 'ЁЛ', 'СЁ', 'МЁ', 'НЁ', 'ВЁ', 'ЯЧ', 'ЮЧ', 'ЭХ', 'ШЕ', 'ЭС', 'ЭР', 'ЭЙ', 'ОЙ',
+            'ПРА', 'СПРА', 'СТРА', 'ПРО', 'СПРО', 'СТРО', 'ПРУ', 'СПРУ', 'СТРУ', 'ПРИ', 'СПРИ', 'СТРИ',
+            'ЗЛА', 'ЗЛУ', 'ЗЛО', 'ЗЛЫ', 'ГРА', 'ГНА', 'ГРО', 'ГНО', 'ГРУ', 'ГНУ', 'ГРИ', 'ГНИ'
         ];
 
         // --- ИКОНКИ ---
@@ -222,7 +236,6 @@
                     `${getValidPrefix(prefixes[1] || 'Х', S1)}${S1}`, 
                     `${getValidPrefix(prefixes[1] || 'Х', S2)}${S2}` 
                 ];
-                // Заполняем остаток слогами из документа
                 const allDistractors = [...localDistractors, ...docSyllables].filter(d => !targets.includes(d));
                 const btns = [...targets, ...allDistractors.slice(0, 12 - targets.length)];
                 return btns.sort(() => Math.random() - 0.5);
@@ -310,7 +323,6 @@
                     {[0, 1, 2].map((index) => {
                         const distances = [85, 55, 30];
                         const s = (syllables[index] || '').trim();
-                        // ИСПРАВЛЕНИЕ: берем строго ПЕРВУЮ букву, чтобы не ехал весь слог
                         const leftL = s.charAt(0) || 'М';
                         const rightL = s.substring(1) || 'А';
 
@@ -505,13 +517,12 @@
         };
 
         // 4. Листопад
-        const LeafGame = ({ syllables }) => {
+        const LeafGame = ({ syllables, prefixes }) => {
             const baseSyllable = (syllables[0] || 'МА').trim().toUpperCase();
             const [consIndex, setConsIndex] = useState(0);
             const [isFalling, setIsFalling] = useState(false);
             const [hasLanded, setHasLanded] = useState(true);
 
-            // ИСПРАВЛЕНИЕ: Выбираем различные согласные из полного алфавита, исключая первую букву слога
             const allConsonants = ['Б', 'В', 'Г', 'Д', 'Ж', 'З', 'К', 'Л', 'М', 'Н', 'П', 'Р', 'С', 'Т', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ'];
             const firstLetter = baseSyllable.charAt(0);
             const validConsonants = useMemo(() => allConsonants.filter(c => c !== firstLetter), [firstLetter]);
@@ -581,23 +592,32 @@
                 return prefix;
             };
 
+            // Пропускаем слог через базу данных
+            const getStrictSyllable = (attempted) => {
+                if (docSyllables.includes(attempted)) return attempted;
+                const candidates = docSyllables.filter(s => s.length === attempted.length);
+                return candidates.length > 0 
+                    ? candidates[Math.floor(Math.random() * candidates.length)] 
+                    : docSyllables[Math.floor(Math.random() * docSyllables.length)];
+            };
+
             const initialGrid = useMemo(() => [
-                { text: `${S1}`, color: '#fb923c' },
-                { text: `${getValidPrefix(P1, S1)}${S1}`, color: '#a3e635' },
-                { text: `${S2}`, color: '#9ca3af' },
-                { text: `${getValidPrefix(P1, S2)}${S2}`, color: '#fb923c' },
-                { text: `${S3}`, color: '#f472b6' },
-                { text: `${getValidPrefix(P1, S3)}${S3}`, color: '#60a5fa' },
-                { text: `${S4}`, color: '#a3e635' },
-                { text: `${getValidPrefix(P1, S4)}${S4}`, color: '#f472b6' },
-                { text: `${S1}`, color: '#fb923c' },
-                { text: `${getValidPrefix(P2, S1)}${S1}`, color: '#f87171' },
-                { text: `${S2}`, color: '#9ca3af' },
-                { text: `${getValidPrefix(P2, S2)}${S2}`, color: '#f87171' },
-                { text: `${S3}`, color: '#9ca3af' },
-                { text: `${getValidPrefix(P2, S3)}${S3}`, color: '#a3e635' },
-                { text: `${S4}`, color: '#60a5fa' },
-                { text: `${getValidPrefix(P2, S4)}${S4}`, color: '#a3e635' }
+                { text: getStrictSyllable(`${S1}`), color: '#fb923c' },
+                { text: getStrictSyllable(`${getValidPrefix(P1, S1)}${S1}`), color: '#a3e635' },
+                { text: getStrictSyllable(`${S2}`), color: '#9ca3af' },
+                { text: getStrictSyllable(`${getValidPrefix(P1, S2)}${S2}`), color: '#fb923c' },
+                { text: getStrictSyllable(`${S3}`), color: '#f472b6' },
+                { text: getStrictSyllable(`${getValidPrefix(P1, S3)}${S3}`), color: '#60a5fa' },
+                { text: getStrictSyllable(`${S4}`), color: '#a3e635' },
+                { text: getStrictSyllable(`${getValidPrefix(P1, S4)}${S4}`), color: '#f472b6' },
+                { text: getStrictSyllable(`${S1}`), color: '#fb923c' },
+                { text: getStrictSyllable(`${getValidPrefix(P2, S1)}${S1}`), color: '#f87171' },
+                { text: getStrictSyllable(`${S2}`), color: '#9ca3af' },
+                { text: getStrictSyllable(`${getValidPrefix(P2, S2)}${S2}`), color: '#f87171' },
+                { text: getStrictSyllable(`${S3}`), color: '#9ca3af' },
+                { text: getStrictSyllable(`${getValidPrefix(P2, S3)}${S3}`), color: '#a3e635' },
+                { text: getStrictSyllable(`${S4}`), color: '#60a5fa' },
+                { text: getStrictSyllable(`${getValidPrefix(P2, S4)}${S4}`), color: '#a3e635' }
             ].map(item => ({ ...item, popped: false })), [S1, S2, S3, S4, P1, P2]);
 
             const [grid, setGrid] = useState(initialGrid);
