@@ -5,10 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Слоговой Тренажер: Весенний Лес</title>
     
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Самые надежные ссылки для работы файла прямо с компьютера -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Все стили и анимации вынесены сюда для стабильной работы -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        body { font-family: 'Nunito', sans-serif; margin: 0; padding: 0; }
+        
+        @keyframes float { 0% { transform: translateX(-50px); } 50% { transform: translateX(50px); } 100% { transform: translateX(-50px); } }
+        @keyframes riseUp { from { top: 120%; } to { top: var(--final-top); } }
+        @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
+        @keyframes popIn { 0% { transform: scale(0.5) translate(-50%, -50%); opacity: 0; } 70% { transform: scale(1.1) translate(-45%, -45%); opacity: 1; } 100% { transform: scale(1) translate(-50%, -50%); opacity: 1; } }
+        @keyframes leafFall { 
+            0% { transform: translate(40vw, -60vh) rotate(-45deg); opacity: 0; } 
+            10% { opacity: 1; } 
+            30% { transform: translate(20vw, -30vh) rotate(30deg); } 
+            60% { transform: translate(10vw, -15vh) rotate(-20deg); } 
+            100% { transform: translate(0, 0) rotate(15deg); opacity: 1; } 
+        }
+        @keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+        /* Правила для идеальной печати */
+        .print-worksheet { display: none; }
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body { background: white !important; }
+            .print-hidden { display: none !important; }
+            .print-worksheet { display: flex !important; flex-direction: column; width: 100%; min-height: 100vh; background: white; color: black; }
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
@@ -16,30 +45,19 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- ГЛОБАЛЬНЫЙ СПИСОК СЛОГОВ (Строго из документа и скриншотов) ---
+        // --- ГЛОБАЛЬНЫЙ СПИСОК СЛОГОВ (Из вашей тетради) ---
         const docSyllables = [
-            'МА', 'МО', 'МУ', 'МЫ', 'МИ', 'АМ', 'ОМ', 'УМ',
-            'СА', 'СО', 'СУ', 'СЫ', 'СИ', 'АС', 'ОС', 'УС',
-            'ХА', 'ХО', 'ХУ', 'АХ', 'ОХ', 'УХ',
-            'РА', 'РО', 'РУ', 'РЫ', 'РИ', 'АР', 'ОР', 'УР',
-            'ША', 'ШО', 'ШУ', 'ШИ', 'АШ', 'ОШ', 'УШ',
-            'ЛА', 'ЛО', 'ЛУ', 'ЛЫ', 'ЛИ', 'АЛ', 'ОЛ', 'УЛ',
-            'НА', 'НО', 'НУ', 'НЫ', 'НИ', 'АН', 'ОН', 'УН',
-            'КА', 'КО', 'КУ', 'КЫ', 'КИ', 'АК', 'ОК', 'УК',
-            'ТА', 'ТО', 'ТУ', 'ТЫ', 'ТИ', 'АТ', 'ОТ', 'УТ',
-            'ПА', 'ПО', 'ПУ', 'ПЫ', 'ПИ', 'АП', 'ОП', 'УП',
-            'ЗА', 'ЗО', 'ЗУ', 'ЗЫ', 'ЗИ', 'АЗ', 'ОЗ', 'УЗ',
-            'ГА', 'ГО', 'ГУ', 'ГИ', 'АГ', 'ОГ', 'УГ',
-            'ВА', 'ВО', 'ВУ', 'ВЫ', 'ВИ', 'АВ', 'ОВ', 'УВ',
-            'ДА', 'ДО', 'ДУ', 'ДЫ', 'ДИ', 'АД', 'ОД', 'УД',
-            'БА', 'БО', 'БУ', 'БЫ', 'БИ', 'АБ', 'ОБ', 'УБ',
-            'ЖА', 'ЖО', 'ЖУ', 'ЖИ', 'АЖ', 'ОЖ', 'УЖ',
-            'ЦА', 'ЦО', 'ЦУ', 'ЦЫ', 'ЦЕ',
-            'ЩА', 'ЩУ', 'ЩИ', 'ЩЕ', 'ЩЁ',
-            'ФА', 'ФО', 'ФУ', 'ФЫ', 'ФИ', 'ФЁ',
+            'МА', 'МО', 'МУ', 'МЫ', 'МИ', 'АМ', 'ОМ', 'УМ', 'СА', 'СО', 'СУ', 'СЫ', 'СИ', 'АС', 'ОС', 'УС',
+            'ХА', 'ХО', 'ХУ', 'АХ', 'ОХ', 'УХ', 'РА', 'РО', 'РУ', 'РЫ', 'РИ', 'АР', 'ОР', 'УР',
+            'ША', 'ШО', 'ШУ', 'ШИ', 'АШ', 'ОШ', 'УШ', 'ЛА', 'ЛО', 'ЛУ', 'ЛЫ', 'ЛИ', 'АЛ', 'ОЛ', 'УЛ',
+            'НА', 'НО', 'НУ', 'НЫ', 'НИ', 'АН', 'ОН', 'УН', 'КА', 'КО', 'КУ', 'КЫ', 'КИ', 'АК', 'ОК', 'УК',
+            'ТА', 'ТО', 'ТУ', 'ТЫ', 'ТИ', 'АТ', 'ОТ', 'УТ', 'ПА', 'ПО', 'ПУ', 'ПЫ', 'ПИ', 'АП', 'ОП', 'УП',
+            'ЗА', 'ЗО', 'ЗУ', 'ЗЫ', 'ЗИ', 'АЗ', 'ОЗ', 'УЗ', 'ГА', 'ГО', 'ГУ', 'ГИ', 'АГ', 'ОГ', 'УГ',
+            'ВА', 'ВО', 'ВУ', 'ВЫ', 'ВИ', 'АВ', 'ОВ', 'УВ', 'ДА', 'ДО', 'ДУ', 'ДЫ', 'ДИ', 'АД', 'ОД', 'УД',
+            'БА', 'БО', 'БУ', 'БЫ', 'БИ', 'АБ', 'ОБ', 'УБ', 'ЖА', 'ЖО', 'ЖУ', 'ЖИ', 'АЖ', 'ОЖ', 'УЖ',
+            'ЦА', 'ЦО', 'ЦУ', 'ЦЫ', 'ЦЕ', 'ЩА', 'ЩУ', 'ЩИ', 'ЩЕ', 'ЩЁ', 'ФА', 'ФО', 'ФУ', 'ФЫ', 'ФИ', 'ФЁ',
             'ЧА', 'ЧУ', 'ЧИ', 'ЧЕ', 'БЭ', 'ТЁ', 'ДЯ',
-            'СМА', 'СМО', 'СМУ', 'СМЫ', 'ХМА', 'ХМО', 'ХМУ', 'ХМЫ',
-            'МРА', 'МРО', 'МРУ', 'ШРА', 'ШРУ', 'ШРО',
+            'СМА', 'СМО', 'СМУ', 'СМЫ', 'ХМА', 'ХМО', 'ХМУ', 'ХМЫ', 'МРА', 'МРО', 'МРУ', 'ШРА', 'ШРУ', 'ШРО',
             'САМ', 'СОМ', 'СУМ', 'МОС', 'МУС', 'ХАМ', 'ХУМ', 'ХОМ', 'МОХ', 'МАХ',
             'РАМ', 'РОМ', 'РУМ', 'ШУМ', 'ШАМ', 'СЫР', 'СОР', 'ШАР', 'МАЛ', 'МЫЛ',
             'РИМ', 'МИР', 'НОС', 'СЫН', 'СОН', 'МАК', 'РАК', 'ЛУК', 'СУК', 'СОК',
@@ -61,8 +79,6 @@
         const Maximize = (p) => <IconWrapper {...p}><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></IconWrapper>;
         const Minimize = (p) => <IconWrapper {...p}><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></IconWrapper>;
         const Printer = (p) => <IconWrapper {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></IconWrapper>;
-        const Edit2 = (p) => <IconWrapper {...p}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></IconWrapper>;
-        const Check = (p) => <IconWrapper {...p}><polyline points="20 6 9 17 4 12"/></IconWrapper>;
         const Car = (p) => <IconWrapper {...p}><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a2 2 0 00-1.6-.8H9a2 2 0 00-2 2v2L3 11.4a2 2 0 00-1.4.6L1 13.5V16h3m10 0a2 2 0 11-4 0m4 0a2 2 0 10-4 0m-10 0a2 2 0 11-4 0m4 0a2 2 0 10-4 0"/></IconWrapper>;
         const Plane = (p) => <IconWrapper {...p}><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21.5 4c0 0-2 .5-3.5 2L14.5 9.5 6.3 7.7c-.5-.1-.9.1-1.1.5l-1.5 3.1c-.2.4 0 .9.4 1.1L9 15l-3.5 3.5-2.2-.4c-.4-.1-.8.1-1 .4L1 20l5.5 1.5L8 23l1.5-1.3c.3-.2.5-.6.4-1l-.4-2.2L13 15l2.6 4.9c.2.4.7.6 1.1.4l3.1-1.5c.4-.2.6-.6.5-1.1z"/></IconWrapper>;
         const Rocket = (p) => <IconWrapper {...p}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></IconWrapper>;
@@ -73,7 +89,7 @@
         const LeafIcon = (p) => <IconWrapper {...p}><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 22 12 12"/></IconWrapper>;
         const GridIcon = (p) => <IconWrapper {...p}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></IconWrapper>;
 
-        // --- ЗВУКОВЫЕ ЭФФЕКТЫ ---
+        // --- ЗВУКИ ---
         const playSound = (type) => {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -81,46 +97,31 @@
                 const ctx = new AudioContext();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-                
                 if (type === 'pop') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(800, ctx.currentTime);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime);
                     osc.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + 0.05);
-                    gain.gain.setValueAtTime(1, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.05);
+                    gain.gain.setValueAtTime(1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+                    osc.start(); osc.stop(ctx.currentTime + 0.05);
                 } else if (type === 'error') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(150, ctx.currentTime);
                     osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
-                    gain.gain.setValueAtTime(0.5, ctx.currentTime);
-                    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.5, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
                 } else if (type === 'win') {
                     const playNote = (freq, time) => {
-                        const nOsc = ctx.createOscillator();
-                        const nGain = ctx.createGain();
-                        nOsc.connect(nGain);
-                        nGain.connect(ctx.destination);
-                        nOsc.type = 'sine';
+                        const nOsc = ctx.createOscillator(); const nGain = ctx.createGain();
+                        nOsc.connect(nGain); nGain.connect(ctx.destination); nOsc.type = 'sine';
                         nOsc.frequency.setValueAtTime(freq, ctx.currentTime + time);
                         nGain.gain.setValueAtTime(0, ctx.currentTime + time);
                         nGain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + time + 0.05);
                         nGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + time + 0.4);
-                        nOsc.start(ctx.currentTime + time);
-                        nOsc.stop(ctx.currentTime + time + 0.4);
+                        nOsc.start(ctx.currentTime + time); nOsc.stop(ctx.currentTime + time + 0.4);
                     };
-                    playNote(261.63, 0);    
-                    playNote(329.63, 0.1);  
-                    playNote(392.00, 0.2);  
-                    playNote(523.25, 0.35); 
+                    playNote(261.63, 0); playNote(329.63, 0.1); playNote(392.00, 0.2); playNote(523.25, 0.35); 
                 }
-            } catch (e) { console.log("Audio not supported"); }
+            } catch (e) {}
         };
 
         const Confetti = () => {
@@ -128,25 +129,16 @@
             return (
                 <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
                 {Array.from({ length: 80 }).map((_, i) => (
-                    <div
-                    key={i}
-                    className="absolute w-3 h-8 rounded-sm opacity-90"
-                    style={{
-                        left: `${Math.random() * 100}%`,
-                        top: `-50px`,
-                        backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-                        animation: `confetti-fall ${Math.random() * 3 + 2.5}s linear forwards`,
-                        animationDelay: `${Math.random() * 0.5}s`,
-                        transform: `rotate(${Math.random() * 360}deg)`
-                    }}
-                    />
+                    <div key={i} className="absolute w-3 h-8 rounded-sm opacity-90"
+                    style={{ left: `${Math.random() * 100}%`, top: `-50px`, backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+                        animation: `confetti-fall ${Math.random() * 3 + 2.5}s linear forwards`, animationDelay: `${Math.random() * 0.5}s`, transform: `rotate(${Math.random() * 360}deg)`
+                    }} />
                 ))}
-                <style>{`@keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); } }`}</style>
                 </div>
             );
         };
 
-        // --- ЕДИНЫЙ ВЕСЕННИЙ ЛЕСНОЙ ФОН ---
+        // --- ЛЕСНОЙ ФОН ---
         const ForestBackground = () => (
             <div className="absolute inset-0 z-0 overflow-hidden bg-green-50" style={{ background: 'linear-gradient(to bottom, #dbeafe, #f0fdf4)' }}>
                 <div className="absolute top-10 right-20 w-32 h-32 bg-yellow-200 rounded-full opacity-90"></div>
@@ -169,7 +161,7 @@
             </div>
         );
 
-        // --- ДЛЯ ПЕЧАТИ (РАБОЧИЙ ЛИСТ С 3 ЗАДАНИЯМИ) ---
+        // --- ВЕРСИЯ ДЛЯ ПЕЧАТИ ---
         const PrintWorksheet = ({ syllables, prefixes }) => {
             const target = syllables[0] || 'МА';
             const S1 = syllables[0] || 'МА';
@@ -189,13 +181,11 @@
                 return prefix;
             };
 
-            // 1. Шарики (Обманки из документа)
             const balloons = useMemo(() => {
                 const distractors = docSyllables.filter(s => s !== target);
                 return Array(10).fill(null).map((_, i) => (i < 4 ? target : distractors[i % distractors.length])).sort(() => Math.random() - 0.5);
             }, [target]);
 
-            // 2. Лабиринт
             const mazeGrid = useMemo(() => {
                 const cols = 5, rows = 5;
                 const path = new Set();
@@ -217,7 +207,6 @@
                 return grid;
             }, [target]);
 
-            // 3. Секретный пароль телефона
             const phoneSequence = useMemo(() => [
                 { text: S1, color: '#ef4444', label: 'красный' },
                 { text: S3, color: '#3b82f6', label: 'синий' },
@@ -226,16 +215,9 @@
                 { text: `${getValidPrefix(P1, S4)}${S4}`, color: '#a855f7', label: 'фиолет.' }
             ], [S1, S3, P1, S4]);
 
-            // 12 кнопок телефона
             const phoneButtons = useMemo(() => {
                 const targets = phoneSequence.map(s => s.text);
-                const localDistractors = [
-                    S2, 
-                    `${getValidPrefix(P1, S2)}${S2}`, 
-                    `${getValidPrefix(P1, S3)}${S3}`, 
-                    `${getValidPrefix(prefixes[1] || 'Х', S1)}${S1}`, 
-                    `${getValidPrefix(prefixes[1] || 'Х', S2)}${S2}` 
-                ];
+                const localDistractors = [ S2, `${getValidPrefix(P1, S2)}${S2}`, `${getValidPrefix(P1, S3)}${S3}`, `${getValidPrefix(prefixes[1] || 'Х', S1)}${S1}`, `${getValidPrefix(prefixes[1] || 'Х', S2)}${S2}` ];
                 const allDistractors = [...localDistractors, ...docSyllables].filter(d => !targets.includes(d));
                 const btns = [...targets, ...allDistractors.slice(0, 12 - targets.length)];
                 return btns.sort(() => Math.random() - 0.5);
@@ -246,8 +228,6 @@
                     <div className="text-center mb-6 border-b-2 border-black pb-2 w-full">
                         <h1 className="text-3xl font-black uppercase tracking-wider">Учимся читать: Слоги и Слова</h1>
                     </div>
-
-                    {/* Задание 1: Шарики */}
                     <div className="mb-8 w-full">
                         <h2 className="text-xl font-bold mb-4">1. Найди и раскрась все шарики со слогом <span className="underline font-black">{target}</span></h2>
                         <div className="flex flex-wrap justify-between gap-2 px-4">
@@ -259,11 +239,7 @@
                             ))}
                         </div>
                     </div>
-
-                    {/* Разделение на две колонки для Задания 2 и Задания 3 */}
                     <div className="flex gap-8 w-full flex-grow items-start">
-                        
-                        {/* Задание 2: Лабиринт */}
                         <div className="flex-1 flex flex-col items-center border-r-2 border-dashed border-gray-400 pr-8">
                             <h2 className="text-xl font-bold mb-8 self-start w-full">2. Помоги мышке дойти до дома по слогам <span className="underline font-black">{target}</span></h2>
                             <div className="relative inline-block mt-4">
@@ -280,11 +256,8 @@
                                 </div>
                             </div>
                         </div>
-
-                        {/* Задание 3: Телефон */}
                         <div className="flex-1 flex flex-col items-center pl-2">
                             <h2 className="text-xl font-bold mb-4 self-start w-full">3. Разблокируй телефон. Закрась кнопки в цвета пароля:</h2>
-                            
                             <div className="flex justify-between w-full px-1 mb-6 mt-2">
                                 {phoneSequence.map((item, i) => (
                                     <div key={i} className="flex flex-col items-center">
@@ -295,7 +268,6 @@
                                     </div>
                                 ))}
                             </div>
-
                             <div className="w-[240px] h-[350px] border-[5px] border-black rounded-[2.5rem] p-4 flex flex-col items-center bg-gray-50 shadow-sm mx-auto">
                                 <div className="w-16 h-2 bg-black rounded-full mb-6 mt-2"></div>
                                 <div className="grid grid-cols-3 gap-3 w-full">
@@ -308,15 +280,12 @@
                                 <div className="w-10 h-10 border-[3px] border-black rounded-full mt-auto mb-2 bg-white"></div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             );
         };
 
-        // --- ОСНОВНЫЕ ИГРЫ ---
-        
-        // 1. Дорожки
+        // --- ДОРОЖКИ ---
         const TracksGame = ({ syllables, triggerAnimation, animations }) => {
             return (
                 <div className="w-full px-8 flex flex-col gap-12 bg-white/60 backdrop-blur-sm p-12 rounded-[3rem] shadow-sm border-2 border-white/60">
@@ -325,7 +294,6 @@
                         const s = (syllables[index] || '').trim();
                         const leftL = s.charAt(0) || 'М';
                         const rightL = s.substring(1) || 'А';
-
                         return (
                             <div key={index} className="flex items-center relative">
                                 <div className="flex-shrink-0 z-20">
@@ -358,16 +326,14 @@
             );
         };
 
-        // 2. Шарики
+        // --- ШАРИКИ ---
         const BalloonGame = ({ syllables }) => {
             const targetSyllables = syllables.slice(0, 4).filter(s => s.length >= 2);
             const distractors = docSyllables.filter(d => !targetSyllables.includes(d));
-
             const [currentTargetIndex, setCurrentTargetIndex] = useState(0);
             const [levelScore, setLevelScore] = useState(0); 
             const [showConfetti, setShowConfetti] = useState(false);
             const [balloons, setBalloons] = useState([]);
-            
             const currentTarget = targetSyllables[currentTargetIndex % targetSyllables.length] || 'МА';
 
             useEffect(() => {
@@ -379,16 +345,13 @@
                 const newBalloons = Array.from({ length: 15 }).map((_, i) => {
                     const col = i % 5, row = Math.floor(i / 5); 
                     const text = types[i] ? currentTarget : distractors[Math.floor(Math.random() * distractors.length)];
-                    
                     const finalTopPercent = 35 + row * 15; 
                     const duration = ((120 - finalTopPercent) / 100) * 8; 
-                    
                     return {
                         id: Math.random().toString(36).substr(2, 9), text,
                         color: colors[Math.floor(Math.random() * colors.length)],
                         left: `${4 + col * 19}%`, finalTop: `${finalTopPercent}%`,
-                        delay: `${row * 0.5 + Math.random() * 0.3}s`, duration: `${duration}s`, bobDelay: `${Math.random() * 2}s`, 
-                        state: 'floating' 
+                        delay: `${row * 0.5 + Math.random() * 0.3}s`, duration: `${duration}s`, bobDelay: `${Math.random() * 2}s`, state: 'floating' 
                     };
                 });
                 setBalloons(newBalloons);
@@ -403,29 +366,20 @@
                         const newScore = levelScore + 1;
                         setLevelScore(newScore);
                         if (newScore === 5) {
-                            playSound('win');
-                            setShowConfetti(true);
-                            setTimeout(() => {
-                                setCurrentTargetIndex(prevIndex => prevIndex + 1);
-                                setLevelScore(0);
-                                setShowConfetti(false);
-                            }, 4000); 
+                            playSound('win'); setShowConfetti(true);
+                            setTimeout(() => { setCurrentTargetIndex(prevIndex => prevIndex + 1); setLevelScore(0); setShowConfetti(false); }, 4000); 
                         }
                         return { ...b, state: 'popped' };
                     } else {
-                        playSound('error');
-                        return { ...b, state: 'error' };
+                        playSound('error'); return { ...b, state: 'error' };
                     }
                 }));
-                if (text !== currentTarget) {
-                    setTimeout(() => { setBalloons(prev => prev.map(b => b.id === id ? { ...b, state: 'floating' } : b)); }, 500);
-                }
+                if (text !== currentTarget) setTimeout(() => { setBalloons(prev => prev.map(b => b.id === id ? { ...b, state: 'floating' } : b)); }, 500);
             };
 
             return (
                 <div className="absolute inset-0 w-full h-full overflow-hidden flex flex-col items-center">
                     {showConfetti && <Confetti />}
-                    
                     <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-40 bg-white/95 backdrop-blur-md px-16 py-4 rounded-b-[40px] shadow-2xl border-4 border-t-0 border-green-300 flex flex-col items-center">
                         <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest mb-1">Лопни слог:</h2>
                         <div className="text-7xl font-black text-green-700 drop-shadow-md leading-none">{currentTarget}</div>
@@ -433,7 +387,6 @@
                             {[...Array(5)].map((_, i) => <Star key={i} size={32} className={`${i < levelScore ? 'text-yellow-400 fill-yellow-400 drop-shadow-sm scale-110' : 'text-gray-200'} transition-all duration-300`} />)}
                         </div>
                     </div>
-
                     <div className="absolute inset-0 z-10 pointer-events-none">
                         {balloons.map((balloon) => {
                             if (balloon.state === 'popped') return null;
@@ -453,15 +406,13 @@
             );
         };
 
-        // 3. Домик
+        // --- ДОМИК ---
         const HouseGame = ({ syllables }) => {
             const [leftFloor, setLeftFloor] = useState(0);
             const [rightFloor, setRightFloor] = useState(0);
-
             const rightChar = syllables[0]?.slice(0, -1) || 'М';
             const vowels = [syllables[2]?.slice(-1) || 'У', syllables[1]?.slice(-1) || 'О', syllables[0]?.slice(-1) || 'А'];
             const leftChar = 'С';
-
             const moveLeft = (dir) => setLeftFloor(Math.max(0, Math.min(3, leftFloor + dir)));
             const moveRight = (dir) => setRightFloor(Math.max(0, Math.min(3, rightFloor + dir)));
 
@@ -516,7 +467,7 @@
             );
         };
 
-        // 4. Листопад
+        // --- ЛИСТОПАД ---
         const LeafGame = ({ syllables, prefixes }) => {
             const baseSyllable = (syllables[0] || 'МА').trim().toUpperCase();
             const [consIndex, setConsIndex] = useState(0);
@@ -530,13 +481,8 @@
 
             const dropNextLeaf = () => {
                 if (isFalling) return;
-                setHasLanded(false);
-                setConsIndex((prev) => (prev + 1));
-                setIsFalling(true);
-                setTimeout(() => {
-                    setIsFalling(false);
-                    setHasLanded(true);
-                }, 1500);
+                setHasLanded(false); setConsIndex((prev) => (prev + 1)); setIsFalling(true);
+                setTimeout(() => { setIsFalling(false); setHasLanded(true); }, 1500);
             };
 
             return (
@@ -572,14 +518,10 @@
             );
         };
 
-        // 5. Таблица-Пузырики
+        // --- ТАБЛИЦА ПУЗЫРИКИ ---
         const GridGame = ({ syllables, prefixes }) => {
-            const S1 = syllables[0] || 'МА';
-            const S2 = syllables[1] || 'МО';
-            const S3 = syllables[2] || 'МУ';
-            const S4 = syllables[3] || 'МЫ';
-            const P1 = prefixes[0] || 'С';
-            const P2 = prefixes[1] || 'Х';
+            const S1 = syllables[0] || 'МА'; const S2 = syllables[1] || 'МО'; const S3 = syllables[2] || 'МУ'; const S4 = syllables[3] || 'МЫ';
+            const P1 = prefixes[0] || 'С'; const P2 = prefixes[1] || 'Х';
 
             const getValidPrefix = (prefix, syllable) => {
                 if (!syllable || !prefix) return prefix;
@@ -592,13 +534,10 @@
                 return prefix;
             };
 
-            // Пропускаем слог через базу данных
             const getStrictSyllable = (attempted) => {
                 if (docSyllables.includes(attempted)) return attempted;
                 const candidates = docSyllables.filter(s => s.length === attempted.length);
-                return candidates.length > 0 
-                    ? candidates[Math.floor(Math.random() * candidates.length)] 
-                    : docSyllables[Math.floor(Math.random() * docSyllables.length)];
+                return candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : docSyllables[Math.floor(Math.random() * docSyllables.length)];
             };
 
             const initialGrid = useMemo(() => [
@@ -626,9 +565,7 @@
             const handlePop = (index) => {
                 if (grid[index].popped) return;
                 playSound('pop');
-                const newGrid = [...grid];
-                newGrid[index].popped = true;
-                setGrid(newGrid);
+                const newGrid = [...grid]; newGrid[index].popped = true; setGrid(newGrid);
             };
 
             return (
@@ -640,13 +577,8 @@
                                     <span className={`text-3xl sm:text-5xl font-black drop-shadow-sm h-12 flex items-center transition-colors duration-300 ${item.popped ? 'text-gray-400' : 'text-gray-800'}`}>
                                         {item.text}
                                     </span>
-                                    <div 
-                                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-full transition-all duration-300"
-                                        style={{
-                                            background: item.popped ? '#d1d5db' : `radial-gradient(circle at 35% 35%, #ffffff 0%, ${item.color} 40%, ${item.color} 100%)`,
-                                            boxShadow: item.popped ? 'inset 4px 4px 10px rgba(0,0,0,0.1)' : '0 8px 15px rgba(0,0,0,0.2), inset -8px -8px 15px rgba(0,0,0,0.1)',
-                                            transform: item.popped ? 'scale(0.95)' : 'scale(1)'
-                                        }}
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full transition-all duration-300"
+                                        style={{ background: item.popped ? '#d1d5db' : `radial-gradient(circle at 35% 35%, #ffffff 0%, ${item.color} 40%, ${item.color} 100%)`, boxShadow: item.popped ? 'inset 4px 4px 10px rgba(0,0,0,0.1)' : '0 8px 15px rgba(0,0,0,0.2), inset -8px -8px 15px rgba(0,0,0,0.1)', transform: item.popped ? 'scale(0.95)' : 'scale(1)' }}
                                     ></div>
                                 </div>
                             ))}
@@ -656,11 +588,10 @@
             );
         };
 
-        // --- КОРНЕВОЙ КОМПОНЕНТ ---
+        // --- ГЛАВНЫЙ КОМПОНЕНТ ---
         const SyllableTrainer = () => {
             const [isFullscreen, setIsFullscreen] = useState(false);
             const [currentPage, setCurrentPage] = useState('learn');
-            
             const [syllables, setSyllables] = useState(['МА', 'МО', 'МУ', 'МЫ']);
             const [prefixes, setPrefixes] = useState(['С', 'Х']);
             const [animations, setAnimations] = useState({ 0: false, 1: false, 2: false });
@@ -668,19 +599,15 @@
             const triggerAnimation = (id) => setAnimations(prev => ({ ...prev, [id]: !prev[id] }));
 
             const updateSyllable = (index, value) => {
-                const newSyllables = [...syllables];
-                newSyllables[index] = value.toUpperCase().slice(0, 3) || '';
-                setSyllables(newSyllables);
+                const newSyllables = [...syllables]; newSyllables[index] = value.toUpperCase().slice(0, 3) || ''; setSyllables(newSyllables);
             };
 
             const updatePrefix = (index, value) => {
-                const newPrefixes = [...prefixes];
-                newPrefixes[index] = value.toUpperCase().slice(0, 1) || '';
-                setPrefixes(newPrefixes);
+                const newPrefixes = [...prefixes]; newPrefixes[index] = value.toUpperCase().slice(0, 1) || ''; setPrefixes(newPrefixes);
             };
 
             const toggleFullscreen = () => {
-                if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => console.log(err)); setIsFullscreen(true); }
+                if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(e => console.log(e)); setIsFullscreen(true); }
                 else { document.exitFullscreen(); setIsFullscreen(false); }
             };
 
@@ -692,47 +619,6 @@
 
             return (
                 <div className="min-h-screen font-sans selection:bg-green-200 overflow-hidden relative bg-green-50">
-                    <style>{`
-                        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
-                        body { font-family: 'Nunito', sans-serif; }
-                        
-                        /* ВАЖНО: Правила для печати без display: none */
-                        .print-worksheet { display: none; }
-                        @media print {
-                            @page { size: A4 portrait; margin: 10mm; }
-                            body { background: white !important; margin: 0; padding: 0; }
-                            .print-hidden { display: none !important; }
-                            .print-worksheet { display: flex !important; flex-direction: column; width: 100%; min-height: 100vh; background: white; color: black; }
-                        }
-
-                        @keyframes float {
-                        0% { transform: translateX(-50px); }
-                        50% { transform: translateX(50px); }
-                        100% { transform: translateX(-50px); }
-                        }
-                        @keyframes riseUp {
-                        from { top: 120%; }
-                        to { top: var(--final-top); }
-                        }
-                        @keyframes bob {
-                        0%, 100% { transform: translateY(0) rotate(-2deg); }
-                        50% { transform: translateY(-8px) rotate(2deg); }
-                        }
-                        @keyframes popIn {
-                        0% { transform: scale(0.5) translate(-50%, -50%); opacity: 0; }
-                        70% { transform: scale(1.1) translate(-45%, -45%); opacity: 1; }
-                        100% { transform: scale(1) translate(-50%, -50%); opacity: 1; }
-                        }
-                        @keyframes leafFall {
-                        0% { transform: translate(40vw, -60vh) rotate(-45deg); opacity: 0; }
-                        10% { opacity: 1; }
-                        30% { transform: translate(20vw, -30vh) rotate(30deg); }
-                        60% { transform: translate(10vw, -15vh) rotate(-20deg); }
-                        100% { transform: translate(0, 0) rotate(15deg); opacity: 1; }
-                        }
-                    `}</style>
-
-                    {/* Версия для печати */}
                     <PrintWorksheet syllables={syllables} prefixes={prefixes} />
 
                     <div className="print-hidden w-full h-full relative">
@@ -745,24 +631,12 @@
                             </button>
 
                             <div className="flex gap-2 flex-wrap justify-end bg-white/80 backdrop-blur-md p-2 rounded-full shadow-xl border-2 border-white">
-                                <button onClick={() => setCurrentPage('learn')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'learn' ? 'bg-pink-400 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}>
-                                    <Car size={20} className="hidden xl:block"/> <span className="hidden md:block">ДОРОЖКИ</span><span className="md:hidden">1</span>
-                                </button>
-                                <button onClick={() => setCurrentPage('game')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'game' ? 'bg-blue-400 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}>
-                                    <Star size={20} className="hidden xl:block"/> <span className="hidden md:block">ШАРИКИ</span><span className="md:hidden">2</span>
-                                </button>
-                                <button onClick={() => setCurrentPage('house')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'house' ? 'bg-orange-500 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}>
-                                    <Home size={20} className="hidden xl:block"/> <span className="hidden md:block">ДОМИК</span><span className="md:hidden">3</span>
-                                </button>
-                                <button onClick={() => setCurrentPage('spring')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'spring' ? 'bg-green-500 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}>
-                                    <LeafIcon size={20} className="hidden xl:block"/> <span className="hidden md:block">ВЕСНА</span><span className="md:hidden">4</span>
-                                </button>
-                                <button onClick={() => setCurrentPage('grid')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'grid' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}>
-                                    <GridIcon size={20} className="hidden xl:block"/> <span className="hidden md:block">ПУЗЫРИКИ</span><span className="md:hidden">5</span>
-                                </button>
-                                <button onClick={toggleFullscreen} className="p-2 ml-2 bg-gray-100 rounded-full shadow-inner text-gray-500 hover:text-gray-800 transition-colors">
-                                    {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-                                </button>
+                                <button onClick={() => setCurrentPage('learn')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'learn' ? 'bg-pink-400 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}><Car size={20} className="hidden xl:block"/> <span className="hidden md:block">ДОРОЖКИ</span><span className="md:hidden">1</span></button>
+                                <button onClick={() => setCurrentPage('game')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'game' ? 'bg-blue-400 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}><Star size={20} className="hidden xl:block"/> <span className="hidden md:block">ШАРИКИ</span><span className="md:hidden">2</span></button>
+                                <button onClick={() => setCurrentPage('house')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'house' ? 'bg-orange-500 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}><Home size={20} className="hidden xl:block"/> <span className="hidden md:block">ДОМИК</span><span className="md:hidden">3</span></button>
+                                <button onClick={() => setCurrentPage('spring')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'spring' ? 'bg-green-500 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}><LeafIcon size={20} className="hidden xl:block"/> <span className="hidden md:block">ВЕСНА</span><span className="md:hidden">4</span></button>
+                                <button onClick={() => setCurrentPage('grid')} className={`flex items-center gap-2 px-4 py-2 rounded-full font-black text-sm transition-all ${currentPage === 'grid' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-500 hover:bg-white'}`}><GridIcon size={20} className="hidden xl:block"/> <span className="hidden md:block">ПУЗЫРИКИ</span><span className="md:hidden">5</span></button>
+                                <button onClick={toggleFullscreen} className="p-2 ml-2 bg-gray-100 rounded-full shadow-inner text-gray-500 hover:text-gray-800 transition-colors">{isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}</button>
                             </div>
                         </div>
 
